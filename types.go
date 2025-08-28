@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 // GuildConfig holds the configuration for a specific guild.
@@ -191,46 +193,65 @@ func (gc *GuildConfig) ListExists(name string) bool {
 
 // DiscordCore holds the core configuration for the Discord bot package.
 type DiscordCore struct {
-	BotName     string
-	Token       string
-	SupportPath string
-	ConfigPath  string
-	Branch      string
+	BotName       string
+	Token         string
+	SupportPath   string
+	ConfigPath    string
+	Branch        string
+	Session       *discordgo.Session
+	ConfigManager *ConfigManager
 }
 
 // NewDiscordCore creates a new DiscordCore instance.
 // It fetches the bot name from the Discord API and initializes paths based on the current git branch.
-func NewDiscordCore(botName string) *DiscordCore {
-	branch := getCurrentGitBranch()
-	token := getDiscordBotToken(botName, branch)
-	botName = getBotNameFromAPI(token)
-	supportPath := getApplicationSupportPath(botName)
+func NewDiscordCore(botName string) (*DiscordCore, error) {
+	branch, err := getCurrentGitBranch()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current git branch: %w", err)
+	}
+	token, err := getDiscordBotToken(botName, branch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Discord bot token: %w", err)
+	}
+	actualBotName, err := getBotNameFromAPI(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bot name from API: %w", err)
+	}
+	supportPath := getApplicationSupportPath(actualBotName)
 	configPath := filepath.Join(supportPath, "data")
 
 	// Ensure directories exist
-	ensureDirectories([]string{supportPath, configPath})
+	if err := ensureDirectories([]string{supportPath, configPath}); err != nil {
+		return nil, fmt.Errorf("failed to ensure directories: %w", err)
+	}
 
 	// Ensure config files exist
 	if err := EnsureConfigFiles(configPath); err != nil {
-		log.Fatalf("Failed to ensure config files: %v", err)
+		return nil, fmt.Errorf("failed to ensure config files: %w", err)
+	}
+
+	configManager, err := newConfigManager(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
 
 	return &DiscordCore{
-		BotName:     botName,
-		Token:       token,
-		SupportPath: supportPath,
-		ConfigPath:  configPath,
-		Branch:      branch,
-	}
+		BotName:       actualBotName,
+		Token:         token,
+		SupportPath:   supportPath,
+		ConfigPath:    configPath,
+		Branch:        branch,
+		ConfigManager: configManager,
+	}, nil
 }
 
 // NewConfigManager creates a new ConfigManager using this DiscordCore's config path.
-func (core *DiscordCore) NewConfigManager() *ConfigManager {
+func (core *DiscordCore) NewConfigManager() (*ConfigManager, error) {
 	return newConfigManager(core.ConfigPath)
 }
 
 // NewAvatarCacheManager creates a new AvatarCacheManager using this DiscordCore's config path.
-func (core *DiscordCore) NewAvatarCacheManager() *AvatarCacheManager {
+func (core *DiscordCore) NewAvatarCacheManager() (*AvatarCacheManager, error) {
 	return newAvatarCacheManager(core.ConfigPath)
 }
 
@@ -254,26 +275,45 @@ func (core *DiscordCore) GetSupportPath() string {
 	return core.SupportPath
 }
 
-// GetBranch returns the current branch.
-func (core *DiscordCore) GetBranch() string {
-	return core.Branch
+// GetSession returns the Discord session.
+func (core *DiscordCore) GetSession() *discordgo.Session {
+	return core.Session
+}
+
+// DetectGuilds detects guilds where the bot is present and adds them to the config.
+func (core *DiscordCore) DetectGuilds() error {
+	return core.ConfigManager.DetectGuilds(core.Session)
+}
+
+// RegisterGuild adds a new guild to the configuration.
+func (core *DiscordCore) RegisterGuild(guildID string) error {
+	return core.ConfigManager.RegisterGuild(core.Session, guildID)
+}
+
+// ShowConfiguredGuilds logs the configured guilds.
+func (core *DiscordCore) ShowConfiguredGuilds() {
+	ShowConfiguredGuilds(core.Session, core.ConfigManager)
+}
+
+// LogConfiguredGuilds logs a summary of configured guilds.
+func (core *DiscordCore) LogConfiguredGuilds() error {
+	return LogConfiguredGuilds(core.ConfigManager, core.Session)
 }
 
 // getCurrentGitBranch gets the current git branch.
-func getCurrentGitBranch() string {
+func getCurrentGitBranch() (string, error) {
 	data, err := os.ReadFile(".git/HEAD")
 	if err != nil {
-		log.Printf("Failed to read git HEAD: %v", err)
-		return "unknown"
+		return "", fmt.Errorf("failed to read git HEAD: %w", err)
 	}
 	line := strings.TrimSpace(string(data))
 	if strings.HasPrefix(line, "ref: ") {
 		parts := strings.Split(line, "/")
 		if len(parts) > 0 {
-			return parts[len(parts)-1]
+			return parts[len(parts)-1], nil
 		}
 	}
-	return line
+	return line, nil
 }
 
 // getApplicationSupportPath returns the application support path based on branch and bot name.
@@ -282,7 +322,7 @@ func getApplicationSupportPath(botName string) string {
 }
 
 // getDiscordBotToken returns the Discord bot token based on the branch.
-func getDiscordBotToken(botName string, branch string) string {
+func getDiscordBotToken(botName string, branch string) (string, error) {
 	var token string
 	switch branch {
 	case "main":
@@ -290,22 +330,22 @@ func getDiscordBotToken(botName string, branch string) string {
 	case "alice-main":
 		token = os.Getenv(fmt.Sprintf("%s_TOKEN_DEV", botName))
 	default:
-		log.Fatalf("could not get Discord bot token for branch: %s", branch)
+		return "", fmt.Errorf("could not get Discord bot token for branch: %s", branch)
 	}
 
 	if token == "" {
-		log.Fatalf("Discord bot token is not set for branch: %s", branch)
+		return "", fmt.Errorf("Discord bot token is not set for branch: %s", branch)
 	}
 
 	log.Printf("Discord bot token set for branch: %s", branch)
-	return token
+	return token, nil
 }
 
 // getBotNameFromAPI fetches the bot's username from the Discord API using the token.
-func getBotNameFromAPI(token string) string {
+func getBotNameFromAPI(token string) (string, error) {
 	req, err := http.NewRequest("GET", "https://discord.com/api/v10/users/@me", nil)
 	if err != nil {
-		log.Fatalf("Failed to create request for bot info: %v", err)
+		return "", fmt.Errorf("failed to create request for bot info: %w", err)
 	}
 
 	req.Header.Set("Authorization", "Bot "+token)
@@ -314,12 +354,12 @@ func getBotNameFromAPI(token string) string {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Failed to fetch bot info from Discord API: %v", err)
+		return "", fmt.Errorf("failed to fetch bot info from Discord API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Discord API returned status %d when fetching bot info", resp.StatusCode)
+		return "", fmt.Errorf("Discord API returned status %d when fetching bot info", resp.StatusCode)
 	}
 
 	var user struct {
@@ -327,9 +367,9 @@ func getBotNameFromAPI(token string) string {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		log.Fatalf("Failed to decode bot info response: %v", err)
+		return "", fmt.Errorf("failed to decode bot info response: %w", err)
 	}
 
 	log.Printf("Fetched bot name from API: %s", user.Username)
-	return user.Username
+	return user.Username, nil
 }

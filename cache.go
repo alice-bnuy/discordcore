@@ -29,13 +29,16 @@ type AvatarCacheManager struct {
 	lastSave   time.Time
 }
 
-func newAvatarCacheManager(configPath string) *AvatarCacheManager {
+func newAvatarCacheManager(configPath string) (*AvatarCacheManager, error) {
+	if configPath == "" {
+		return nil, fmt.Errorf("config path cannot be empty")
+	}
 	path := filepath.Join(configPath, "cache.json")
 	return &AvatarCacheManager{
 		path:       path,
 		configPath: configPath,
 		guilds:     make(map[string]*AvatarCache),
-	}
+	}, nil
 }
 
 // Load loads the cache from the file.

@@ -15,7 +15,10 @@ import (
 )
 
 // NewConfigManager creates a new configuration manager with the given config path.
-func newConfigManager(configPath string) *ConfigManager {
+func newConfigManager(configPath string) (*ConfigManager, error) {
+	if configPath == "" {
+		return nil, fmt.Errorf("config path cannot be empty")
+	}
 	configFilePath := filepath.Join(configPath, ConfigFileName)
 	cacheFilePath := filepath.Join(configPath, CacheFileName)
 	return &ConfigManager{
@@ -23,7 +26,7 @@ func newConfigManager(configPath string) *ConfigManager {
 		cacheFilePath:  cacheFilePath,
 		logsDirPath:    logutil.LogsDirPath,
 		configPath:     configPath,
-	}
+	}, nil
 }
 
 // Load loads the configuration from file.
