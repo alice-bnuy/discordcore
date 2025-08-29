@@ -233,7 +233,7 @@ func NewDiscordCore(token, configPath, cachePath string) (*DiscordCore, error) {
 	}
 
 	// Get bot name from Discord API using the token
-	botName, err := getBotNameFromAPI(token)
+	botName, err := GetBotNameFromAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bot name from API: %w", err)
 	}
