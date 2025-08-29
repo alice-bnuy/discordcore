@@ -48,7 +48,7 @@ func GetBotNameFromAPI(token string) (string, error) {
 func createDirectory(path string) error {
 	logutil.Infof("Attempting to create directory at path: %s", path) // Log the path for debugging
 	path = sanitizePath(path)
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := ensureDirectories(path); err != nil {
 		logutil.Errorf("Failed to create directory %s: %v", path, err) // Log the error for debugging
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
@@ -67,4 +67,21 @@ func sanitizePath(path string) string {
 	}
 
 	return sanitizedPath
+}
+
+// ensureDirectories ensures all directories in the path exist by creating them if necessary.
+func ensureDirectories(path string) error {
+	directories := strings.Split(path, "/")
+	for _, dir := range directories {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				log.Printf("Failed to create directory: %v", err)
+				logutil.Errorf("Failed to create directory: %s, error: %v", dir, err)
+				return fmt.Errorf("failed to create directory: %w", err)
+			}
+			log.Printf("Directory created at %s", dir)
+			logutil.Infof("Directory created at %s", dir)
+		}
+	}
+	return nil
 }

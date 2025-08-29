@@ -48,7 +48,12 @@ func (m *CacheManager) Load() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			m.guilds = make(map[string]*AvatarCache)
-			logutil.WithField("path", m.path).Info("Cache file does not exist, initializing empty cache")
+			defaultCache := `{"guilds":{},"last_updated":"","version":"1.0"}`
+			if err := os.WriteFile(m.path, []byte(defaultCache), 0666); err != nil {
+				logutil.Errorf("Failed to write cache file at %s: %v", m.path, err)
+				return fmt.Errorf("failed to create cache file: %w", err)
+			}
+			logutil.Infof("Cache file successfully written at %s", m.path)
 			return nil
 		}
 		logutil.WithFields(map[string]interface{}{
@@ -159,7 +164,7 @@ func (m *CacheManager) Save() error {
 	// Ensure cache directory exists
 	cacheDir := filepath.Dir(m.path)
 	cacheDir = sanitizePath(cacheDir)
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := ensureDirectories(cacheDir); err != nil {
 		logutil.WithFields(map[string]interface{}{
 			"cacheDir": cacheDir,
 			"error":    err,
@@ -220,7 +225,7 @@ func (m *CacheManager) SaveForGuild(guildID string) error {
 	if err := createDirectory(filepath.Dir(guildCachePath)); err != nil {
 		return fmt.Errorf(ErrCreateCacheDir, err)
 	}
-	if err := os.WriteFile(guildCachePath, data, 0644); err != nil {
+	if err := os.WriteFile(guildCachePath, data, 0666); err != nil {
 		return fmt.Errorf(ErrWriteAvatarCache, err)
 	}
 	return nil

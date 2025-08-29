@@ -356,7 +356,7 @@ func EnsureConfigFiles(configPath string) error {
 	configPath = sanitizePath(configPath)
 
 	// Create config directory if it doesn't exist
-	if err := os.MkdirAll(configPath, 0755); err != nil {
+	if err := ensureDirectories(configPath); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -373,9 +373,11 @@ func EnsureConfigFiles(configPath string) error {
 		if err != nil {
 			return fmt.Errorf("failed to create config file: %w", err)
 		}
-		if err := os.WriteFile(configFilePath, configData, 0644); err != nil {
+		if err := os.WriteFile(configFilePath, configData, 0666); err != nil {
+			logutil.Errorf("Failed to write config file at %s: %v", configFilePath, err)
 			return fmt.Errorf("failed to write config file: %w", err)
 		}
+		logutil.Infof("Config file successfully written at %s", configFilePath)
 	}
 
 	// Check if cache file exists
@@ -385,9 +387,11 @@ func EnsureConfigFiles(configPath string) error {
 
 		// Create basic empty cache
 		defaultCache := `{"guilds":{},"last_updated":"","version":"1.0"}`
-		if err := os.WriteFile(cacheFilePath, []byte(defaultCache), 0644); err != nil {
+		if err := os.WriteFile(cacheFilePath, []byte(defaultCache), 0666); err != nil {
+			logutil.Errorf("Failed to write cache file at %s: %v", cacheFilePath, err)
 			return fmt.Errorf("failed to write cache file: %w", err)
 		}
+		logutil.Infof("Cache file successfully written at %s", cacheFilePath)
 	}
 
 	return nil
