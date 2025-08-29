@@ -158,6 +158,7 @@ func (m *CacheManager) Save() error {
 
 	// Ensure cache directory exists
 	cacheDir := filepath.Dir(m.path)
+	cacheDir = sanitizePath(cacheDir)
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		logutil.WithFields(map[string]interface{}{
 			"cacheDir": cacheDir,

@@ -352,6 +352,9 @@ func ValidateChannel(session *discordgo.Session, guildID, channelID string) erro
 }
 
 func EnsureConfigFiles(configPath string) error {
+	// Sanitize config path
+	configPath = sanitizePath(configPath)
+
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configPath, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
@@ -398,18 +401,4 @@ func (cfg *GuildConfig) FindRulesetByID(id string) (*Ruleset, int) {
 		}
 	}
 	return nil, -1
-}
-
-// createDirectory ensures a directory exists by creating it one level at a time.
-func createDirectory(path string) error {
-	for {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := os.Mkdir(path, 0755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", path, err)
-			}
-		} else {
-			break
-		}
-	}
-	return nil
 }
