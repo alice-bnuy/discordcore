@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/alice-bnuy/logutil"
 )
 
 // GetBotNameFromAPI fetches the bot's username from the Discord API using the token.
@@ -44,8 +46,10 @@ func GetBotNameFromAPI(token string) (string, error) {
 
 // createDirectory ensures a directory exists by creating it and all necessary parent directories.
 func createDirectory(path string) error {
+	logutil.Infof("Attempting to create directory at path: %s", path) // Log the path for debugging
 	path = sanitizePath(path)
 	if err := os.MkdirAll(path, 0755); err != nil {
+		logutil.Errorf("Failed to create directory %s: %v", path, err) // Log the error for debugging
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return nil
