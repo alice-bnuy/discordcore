@@ -190,8 +190,7 @@ func (gc *GuildConfig) ListExists(name string) bool {
 // DiscordCore holds the core configuration for the Discord bot package.
 type DiscordCore struct {
 	BotName       string
-	Token         string
-	SupportPath   string
+	token         string
 	ConfigPath    string
 	CachePath     string
 	Session       *discordgo.Session
@@ -252,48 +251,12 @@ func NewDiscordCore(token, configPath, cachePath string) (*DiscordCore, error) {
 
 	return &DiscordCore{
 		BotName:       botName,
-		Token:         token,
-		SupportPath:   "", // Not used when custom paths are provided
+		token:         token,
 		ConfigPath:    configPath,
 		CachePath:     cachePath,
 		ConfigManager: configManager,
 		CacheManager:  cacheManager,
 	}, nil
-}
-
-// GetToken returns the Discord bot token.
-func (core *DiscordCore) GetToken() string {
-	return core.Token
-}
-
-// GetBotName returns the bot name.
-func (core *DiscordCore) GetBotName() string {
-	return core.BotName
-}
-
-// GetConfigPath returns the config path.
-func (core *DiscordCore) GetConfigPath() string {
-	return core.ConfigPath
-}
-
-// GetCachePath returns the cache path.
-func (core *DiscordCore) GetCachePath() string {
-	return core.CachePath
-}
-
-// GetSupportPath returns the support path.
-func (core *DiscordCore) GetSupportPath() string {
-	return core.SupportPath
-}
-
-// GetSession returns the Discord session.
-func (core *DiscordCore) GetSession() *discordgo.Session {
-	return core.Session
-}
-
-// GetCacheManager returns the cache manager.
-func (core *DiscordCore) GetCacheManager() *CacheManager {
-	return core.CacheManager
 }
 
 // GetBotNameFromAPI fetches the bot's username from the Discord API using the token.

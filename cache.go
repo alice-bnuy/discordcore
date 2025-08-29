@@ -216,7 +216,7 @@ func (m *CacheManager) SaveForGuild(guildID string) error {
 	if err != nil {
 		return fmt.Errorf(ErrMarshalAvatarCache, err)
 	}
-	if err := os.MkdirAll(filepath.Dir(guildCachePath), 0755); err != nil {
+	if err := createDirectory(filepath.Dir(guildCachePath)); err != nil {
 		return fmt.Errorf(ErrCreateCacheDir, err)
 	}
 	if err := os.WriteFile(guildCachePath, data, 0644); err != nil {

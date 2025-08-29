@@ -44,4 +44,7 @@ git push origin main
 git tag -m "$COMMIT_MESSAGE" $VERSION
 git push origin $VERSION
 
+# Volta à branch de testes
+git checkout alice-main
+
 echo "Release $VERSION criada e enviada com sucesso!"

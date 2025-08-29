@@ -19,17 +19,17 @@ func (core *DiscordCore) NewDiscordSession() (*discordgo.Session, error) {
 	var s *discordgo.Session
 
 	// Validate token before creating session
-	if core.Token == "" {
+	if core.token == "" {
 		logutil.Fatal("❌ Discord bot token is empty. Please set the token before starting the bot.")
 		return nil, fmt.Errorf("discord bot token is empty")
 	}
 
 	// Add detailed logging for session creation
-	logutil.Infof("🔑 Creating Discord session with token: %s", core.Token)
+	logutil.Infof("🔑 Creating Discord session with token: %s", core.token)
 
 	if err := errutil.HandleDiscordError("create_session", func() error {
 		var sessionErr error
-		s, sessionErr = discordgo.New("Bot " + core.Token)
+		s, sessionErr = discordgo.New("Bot " + core.token)
 		if sessionErr != nil {
 			logutil.Errorf("❌ Failed to create Discord session: %v", sessionErr)
 		}
