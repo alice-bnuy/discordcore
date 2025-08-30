@@ -201,10 +201,21 @@ func (mgr *ConfigManager) detectGuilds(session *discordgo.Session) error {
 	if mgr.config == nil {
 		mgr.config = &BotConfig{Guilds: []GuildConfig{}}
 	}
-	mgr.config.Guilds = []GuildConfig{}
+	existingGuilds := make(map[string]struct{})
+	for _, g := range mgr.config.Guilds {
+		existingGuilds[g.GuildID] = struct{}{}
+	}
 	mgr.mu.Unlock()
 
+	added := false
 	for _, g := range session.State.Guilds {
+		mgr.mu.RLock()
+		_, exists := existingGuilds[g.ID]
+		mgr.mu.RUnlock()
+		if exists {
+			continue
+		}
+
 		fullGuild, err := session.Guild(g.ID)
 		if err != nil {
 			logutil.WithField("guildID", g.ID).Warnf(LogCouldNotFetchGuild, err)
@@ -226,14 +237,19 @@ func (mgr *ConfigManager) detectGuilds(session *discordgo.Session) error {
 		}
 		mgr.mu.Lock()
 		mgr.config.Guilds = append(mgr.config.Guilds, guildCfg)
+		existingGuilds[g.ID] = struct{}{}
 		mgr.mu.Unlock()
 		logutil.WithFields(map[string]interface{}{
 			"guildName": fullGuild.Name,
 			"guildID":   g.ID,
 			"channelID": channelID,
 		}).Info(LogGuildAdded)
+		added = true
 	}
-	return mgr.SaveConfig()
+	if added {
+		return mgr.SaveConfig()
+	}
+	return nil
 }
 
 // AddGuildToConfig adds a new guild to the configuration.
