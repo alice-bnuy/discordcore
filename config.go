@@ -1,6 +1,7 @@
 package discordcore
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,7 +72,7 @@ func (mgr *ConfigManager) LoadConfig() error {
 
 // Save saves the current configuration to file.
 func (mgr *ConfigManager) SaveConfig() error {
-	log.Println("SaveConfig called")
+	log.Println("ConfigManager.SaveConfig() called")
 	mgr.mu.RLock()
 	defer mgr.mu.RUnlock()
 
@@ -83,20 +84,30 @@ func (mgr *ConfigManager) SaveConfig() error {
 
 	path := mgr.configFilePath
 
-	data, err := json.MarshalIndent(mgr.config, "", "  ")
+	// Marshal current config data
+	newData, err := json.MarshalIndent(mgr.config, "", "  ")
 	if err != nil {
 		log.Printf("SaveConfig: failed to marshal config: %v", err)
 		logutil.Errorf(LogSaveConfigFailedMarshal, err)
 		return fmt.Errorf(ErrFailedMarshalConfig, err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	// Check if the file already exists and compare content
+	if existingData, err := os.ReadFile(path); err == nil {
+		if bytes.Equal(existingData, newData) {
+			log.Printf("SaveConfig: config unchanged, skipping write")
+			logutil.Infof("SaveConfig: config unchanged, skipping write")
+			return nil
+		}
+	}
+
+	// Write new data to file
+	if err := os.WriteFile(path, newData, 0644); err != nil {
 		log.Printf("SaveConfig: failed to write file: %v", err)
 		logutil.Errorf(LogSaveConfigFailedWriteFile, path, err)
 		return errutil.HandleConfigError("write", mgr.configFilePath, func() error { return err })
 	}
 
-	log.Printf("SaveConfig: successfully saved to %s", path)
 	logutil.Infof(LogSaveConfigSuccess, path)
 	return nil
 }

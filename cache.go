@@ -1,8 +1,10 @@
 package discordcore
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -158,6 +160,7 @@ func (m *CacheManager) AvatarHash(guildID, userID string) string {
 
 // Save saves the avatar cache to the configured file path.
 func (m *CacheManager) Save() error {
+	log.Println("CacheManager.Save() called")
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -171,7 +174,8 @@ func (m *CacheManager) Save() error {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(&AvatarMultiGuildCache{
+	// Marshal current cache data
+	newData, err := json.MarshalIndent(&AvatarMultiGuildCache{
 		Guilds:      m.guilds,
 		LastUpdated: time.Now(),
 		Version:     "1.0",
@@ -180,7 +184,16 @@ func (m *CacheManager) Save() error {
 		return fmt.Errorf("failed to marshal cache: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, data, 0644); err != nil {
+	// Check if the file already exists and compare content
+	if existingData, err := os.ReadFile(m.path); err == nil {
+		if bytes.Equal(existingData, newData) {
+			logutil.WithField("path", m.path).Debug("Cache unchanged, skipping write")
+			return nil
+		}
+	}
+
+	// Write new data to file
+	if err := os.WriteFile(m.path, newData, 0644); err != nil {
 		logutil.WithFields(map[string]interface{}{
 			"path":  m.path,
 			"error": err,
