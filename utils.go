@@ -47,26 +47,11 @@ func GetBotNameFromAPI(token string) (string, error) {
 // createDirectory ensures a directory exists by creating it and all necessary parent directories.
 func createDirectory(path string) error {
 	logutil.Infof("Attempting to create directory at path: %s", path) // Log the path for debugging
-	path = sanitizePath(path)
 	if err := ensureDirectories(path); err != nil {
 		logutil.Errorf("Failed to create directory %s: %v", path, err) // Log the error for debugging
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
 	}
 	return nil
-}
-
-// sanitizePath ensures the path is safe for directory creation
-func sanitizePath(path string) string {
-	sanitizedPath := path
-	for old, new := range map[string]string{
-		" ": "\\ ",
-		"(": "\\(",
-		")": "\\)",
-	} {
-		sanitizedPath = strings.ReplaceAll(sanitizedPath, old, new)
-	}
-
-	return sanitizedPath
 }
 
 // ensureDirectories ensures all directories in the path exist by creating them if necessary.

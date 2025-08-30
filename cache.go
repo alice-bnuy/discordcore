@@ -163,7 +163,6 @@ func (m *CacheManager) Save() error {
 
 	// Ensure cache directory exists
 	cacheDir := filepath.Dir(m.path)
-	cacheDir = sanitizePath(cacheDir)
 	if err := ensureDirectories(cacheDir); err != nil {
 		logutil.WithFields(map[string]interface{}{
 			"cacheDir": cacheDir,

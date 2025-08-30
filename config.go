@@ -353,7 +353,6 @@ func ValidateChannel(session *discordgo.Session, guildID, channelID string) erro
 
 func EnsureConfigFiles(configPath string) error {
 	// Sanitize config path
-	configPath = sanitizePath(configPath)
 
 	// Create config directory if it doesn't exist
 	if err := ensureDirectories(configPath); err != nil {
