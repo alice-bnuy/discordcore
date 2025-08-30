@@ -25,7 +25,7 @@ func (core *DiscordCore) NewDiscordSession() (*discordgo.Session, error) {
 	}
 
 	// Add detailed logging for session creation
-	logutil.Infof("🔑 Creating Discord session with token: %s", core.token)
+	logutil.Infof("🔑 Creating Discord session with token: %s", maskToken(core.token))
 
 	if err := errutil.HandleDiscordError("create_session", func() error {
 		var sessionErr error
@@ -62,4 +62,12 @@ func (core *DiscordCore) NewDiscordSession() (*discordgo.Session, error) {
 	logutil.Info("✅ Connected to Discord successfully")
 	core.Session = s
 	return s, nil
+}
+
+// maskToken masks the middle of the token with asterisks for logging
+func maskToken(token string) string {
+	if len(token) <= 10 {
+		return "******"
+	}
+	return token[:5] + "******" + token[len(token)-5:]
 }
