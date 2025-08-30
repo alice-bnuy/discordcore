@@ -22,8 +22,14 @@ func newConfigManager(configPath string) (*ConfigManager, error) {
 	}
 
 	// Ensure config directory exists
-	if err := createDirectory(configPath); err != nil {
-		return nil, fmt.Errorf("failed to create config directory: %w", err)
+	if _, err := os.Stat(configPath); err == nil {
+		logutil.Infof("Config directory already exists at %s", configPath)
+	} else if os.IsNotExist(err) {
+		if err := createDirectory(configPath); err != nil {
+			return nil, fmt.Errorf("failed to create config directory: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("failed to check config directory existence: %w", err)
 	}
 
 	configFilePath := filepath.Join(configPath, ConfigFileName)

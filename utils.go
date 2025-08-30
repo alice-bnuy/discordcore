@@ -45,7 +45,13 @@ func GetBotNameFromAPI(token string) (string, error) {
 
 // createDirectory ensures a directory exists by creating it and all necessary parent directories.
 func createDirectory(path string) error {
-	logutil.Infof("Attempting to create directory at path: %s", path) // Log the path for debugging
+	exists, err := checkIfDirectoryExists(path)
+	if err != nil {
+		return fmt.Errorf("failed to check if directory exists: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("directory already exists at %s", path)
+	}
 	if err := ensureDirectories(path); err != nil {
 		logutil.Errorf("Failed to create directory %s: %v", path, err) // Log the error for debugging
 		return fmt.Errorf("failed to create directory %s: %w", path, err)
@@ -60,4 +66,16 @@ func ensureDirectories(path string) error {
 	}
 	logutil.Infof("Directory created at %s", path)
 	return nil
+}
+
+func checkIfDirectoryExists(path string) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		logutil.Infof("Directory already exists at %s", path)
+		return true, nil
+	} else if os.IsNotExist(err) {
+		logutil.Warnf("Directory does not exist at %s", path)
+		return false, nil
+	}
+	logutil.Errorf("Failed to check directory existence")
+	return false, fmt.Errorf("failed to check directory existence")
 }
