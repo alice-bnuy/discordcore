@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/alice-bnuy/logutil"
 )
@@ -54,19 +53,11 @@ func createDirectory(path string) error {
 	return nil
 }
 
-// ensureDirectories ensures all directories in the path exist by creating them if necessary.
 func ensureDirectories(path string) error {
-	directories := strings.Split(path, "/")
-	for _, dir := range directories {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				log.Printf("Failed to create directory: %v", err)
-				logutil.Errorf("Failed to create directory: %s, error: %v", dir, err)
-				return fmt.Errorf("failed to create directory: %w", err)
-			}
-			log.Printf("Directory created at %s", dir)
-			logutil.Infof("Directory created at %s", dir)
-		}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		logutil.Errorf("Failed to create directory: %s, error: %v", path, err)
+		return fmt.Errorf("failed to create directory: %w", err)
 	}
+	logutil.Infof("Directory created at %s", path)
 	return nil
 }
